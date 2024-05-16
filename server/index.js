@@ -1,0 +1,170 @@
+const express = require('express');
+const bodyParser = require('body-parser');
+const axios = require('axios');
+const cors = require('cors');
+const simpleGit = require('simple-git');
+const glob = require('glob');
+const fs = require('fs-extra');
+const path = require('path');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+
+const genAI = new GoogleGenerativeAI('AIzaSyBmaijcaMAv9qqBcRGhUL4PW62ol466NRg');
+
+const app = express();
+app.use(bodyParser.json());
+app.use(cors());
+
+const repositories = {}; // Store parsed repositories in memory (for simplicity)
+
+app.post('/api/upload-repo', async (req, res) => {
+  const { repoUrl } = req.body;
+
+  // Extract repo name from URL
+  const repoName = path.basename(repoUrl, '.git');
+  const localPath = path.join(__dirname, 'repos', repoName);
+
+  try {
+    // Clone the repository
+    await simpleGit().clone(repoUrl, localPath);
+
+    // Parse the repository files
+    const files = glob.sync('**/*.js', { cwd: localPath });
+    const codeFiles = files.map(file => ({
+      filePath: file,
+      content: fs.readFileSync(path.join(localPath, file), 'utf-8')
+    }));
+
+    // Store the parsed code files in memory
+    repositories[repoName] = codeFiles;
+
+    res.json({ message: 'Repository uploaded and parsed successfully' });
+  } catch (error) {
+    console.error('Error:', error.message);
+    res.status(500).json({ error: 'Failed to upload and parse repository' });
+  }
+});
+
+app.post('/api/ask', async (req, res) => {
+  const { question } = req.body;
+  const repoName = Object.keys(repositories)[0]; // For simplicity, assume one repo
+
+  if (!repoName) {
+    return res.status(400).json({ error: 'No repository uploaded' });
+  }
+
+  const codeFiles = repositories[repoName];
+  const codeSnippet = codeFiles.map(file => file.content).join('\n');
+
+  try {
+    // For text-only input, use the gemini-pro model
+    const model = genAI.getGenerativeModel({ model: "gemini-pro"});
+
+    const prompt = codeSnippet + ' ' + question;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    console.log(text);
+    // Process response from Google Gemini API
+    
+
+    // Return answer to client
+    res.json(text);
+  }
+  catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'An error occurred while processing with Google Gemini API' });
+      }
+
+});
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+
+
+
+
+
+
+
+
+// const express = require('express');
+// const bodyParser = require('body-parser');
+// const axios = require('axios');
+// const app = express();
+// const { GoogleGenerativeAI } = require("@google/generative-ai");
+// var cors = require('cors')
+
+// app.use(cors()) // Use this after the variable declaration
+
+
+// const genAI = new GoogleGenerativeAI('AIzaSyBmaijcaMAv9qqBcRGhUL4PW62ol466NRg');
+
+// app.use(bodyParser.json());
+
+// // const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?AIzaSyBmaijcaMAv9qqBcRGhUL4PW62ol466NRg`;
+
+
+// app.post('/api/ask', async (req, res) => {
+//   const { codeSnippet, question } = req.body;
+
+
+
+
+
+//   try {
+//     // For text-only input, use the gemini-pro model
+//     const model = genAI.getGenerativeModel({ model: "gemini-pro"});
+
+//     const prompt = codeSnippet + ' ' + question;
+
+//     const result = await model.generateContent(prompt);
+//     const response = await result.response;
+//     const text = response.text();
+//     console.log(text);
+//     // Process response from Google Gemini API
+    
+
+//     // Return answer to client
+//     res.json(text);
+//   }
+//   catch (error) {
+//         console.error('Error:', error);
+//         res.status(500).json({ error: 'An error occurred while processing with Google Gemini API' });
+//       }
+
+// });
+
+// //   try {
+// //     // Make request to Google Gemini API
+// //     const response = await axios.post(apiUrl, codeSnippet + ' ' + question , {
+// //       // Include required parameters and authentication credentials
+// //       headers: {
+// //         'Content-Type': 'application/json'
+// //     }
+// //       // Add any other parameters required by the Gemini API
+// //     }, {
+
+// //     });
+
+// //     // Process response from Google Gemini API
+// //     const answer = response.data.answer;
+
+// //     // Return answer to client
+// //     res.json({ answer });
+// //   } catch (error) {
+// //     console.error('Error:', error);
+// //     res.status(500).json({ error: 'An error occurred while processing with Google Gemini API' });
+// //   }
+// // });
+
+// const PORT = process.env.PORT || 3001;
+// app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+
+
+
+// // Access your API key as an environment variable (see "Set up your API key" above)
+
