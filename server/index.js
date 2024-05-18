@@ -8,7 +8,7 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-const genAI = new GoogleGenerativeAI('AIzaSyAjxWscUGdmejD6WMf3lN1yYjYFije4Bns');
+const genAI = new GoogleGenerativeAI('process.env.API_KEY');
 
 const app = express();
 app.use(bodyParser.json());
