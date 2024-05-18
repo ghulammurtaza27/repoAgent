@@ -22,9 +22,12 @@ To run the application locally, follow these steps:
 ## Usage
 
 1. Open the application in your web browser.
-2. Upload your GitHub repository by entering the repository URL and clicking the "Upload" button.
-3. Once the repository is uploaded, you can ask questions about the code by typing them into the input field and clicking the "Ask" button.
-4. The application will analyze the code and provide answers to your questions.
+2. Obtain a Google Gemini API key by visiting [this link](https://aistudio.google.com/app/apikey).
+3. Upload your GitHub repository by entering the repository URL and clicking the "Upload" button.
+4. Once the repository is uploaded, you can ask questions about the code by typing them into the input field and clicking the "Ask" button.
+5. The application will analyze the code and provide answers to your questions.
+
+
 
 ## Contributing
 
