@@ -1,15 +1,14 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const axios = require('axios');
 const cors = require('cors');
 const simpleGit = require('simple-git');
 const glob = require('glob');
 const fs = require('fs-extra');
 const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-
-const genAI = new GoogleGenerativeAI('AIzaSyBmaijcaMAv9qqBcRGhUL4PW62ol466NRg');
+const genAI = new GoogleGenerativeAI('AIzaSyAjxWscUGdmejD6WMf3lN1yYjYFije4Bns');
 
 const app = express();
 app.use(bodyParser.json());
@@ -19,26 +18,31 @@ const repositories = {}; // Store parsed repositories in memory (for simplicity)
 
 app.post('/api/upload-repo', async (req, res) => {
   const { repoUrl } = req.body;
+  const sessionId = uuidv4(); // Generate a unique session ID
 
   // Extract repo name from URL
   const repoName = path.basename(repoUrl, '.git');
-  const localPath = path.join(__dirname, 'repos', repoName);
+  const localPath = path.join(__dirname, 'repos', sessionId);
 
   try {
     // Clone the repository
     await simpleGit().clone(repoUrl, localPath);
 
-    // Parse the repository files
-    const files = glob.sync('**/*.js', { cwd: localPath });
+    // Parse the repository files, excluding node_modules, public, and package-lock.json
+    const files = glob.sync('**/*.js', {
+      cwd: localPath,
+      ignore: ['**/node_modules/**', '**/public/**', '**/package-lock.json']
+    });
+
     const codeFiles = files.map(file => ({
       filePath: file,
       content: fs.readFileSync(path.join(localPath, file), 'utf-8')
     }));
 
-    // Store the parsed code files in memory
-    repositories[repoName] = codeFiles;
+    // Store the parsed code files in memory with the session ID
+    repositories[sessionId] = codeFiles;
 
-    res.json({ message: 'Repository uploaded and parsed successfully' });
+    res.json({ message: 'Repository uploaded and parsed successfully', sessionId }); // Return session ID
   } catch (error) {
     console.error('Error:', error.message);
     res.status(500).json({ error: 'Failed to upload and parse repository' });
@@ -46,41 +50,131 @@ app.post('/api/upload-repo', async (req, res) => {
 });
 
 app.post('/api/ask', async (req, res) => {
-  const { question } = req.body;
-  const repoName = Object.keys(repositories)[0]; // For simplicity, assume one repo
+  const { sessionId, question } = req.body;
 
-  if (!repoName) {
-    return res.status(400).json({ error: 'No repository uploaded' });
+  if (!sessionId || !repositories[sessionId]) {
+    return res.status(400).json({ error: 'No repository found for the provided session ID' });
   }
 
-  const codeFiles = repositories[repoName];
-  const codeSnippet = codeFiles.map(file => file.content).join('\n');
+  const codeFiles = repositories[sessionId];
+  const codeSnippet = codeFiles.map(file => `Filename: ${file.filePath}\n\n${file.content}`).join('\n\n');
 
   try {
     // For text-only input, use the gemini-pro model
-    const model = genAI.getGenerativeModel({ model: "gemini-pro"});
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-    const prompt = codeSnippet + ' ' + question;
+    const prompt = `${codeSnippet}\n\nQuestion: ${question}`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
+
     console.log(text);
+
     // Process response from Google Gemini API
-    
 
     // Return answer to client
     res.json(text);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'An error occurred while processing with Google Gemini API' });
   }
-  catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: 'An error occurred while processing with Google Gemini API' });
-      }
-
 });
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+
+
+
+// const express = require('express');
+// const bodyParser = require('body-parser');
+// const cors = require('cors');
+// const simpleGit = require('simple-git');
+// const glob = require('glob');
+// const fs = require('fs-extra');
+// const path = require('path');
+// const { v4: uuidv4 } = require('uuid');
+// const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+
+// const genAI = new GoogleGenerativeAI('AIzaSyAjxWscUGdmejD6WMf3lN1yYjYFije4Bns');
+
+// const app = express();
+// app.use(bodyParser.json());
+// app.use(cors());
+
+// const repositories = {}; // Store parsed repositories in memory (for simplicity)
+
+// app.post('/api/upload-repo', async (req, res) => {
+//   const { repoUrl } = req.body;
+//   const sessionId = uuidv4(); // Generate a unique session ID
+
+//   // Extract repo name from URL
+//   const repoName = path.basename(repoUrl, '.git');
+//   const localPath = path.join(__dirname, 'repos', sessionId);
+
+//   try {
+//     // Clone the repository
+//     await simpleGit().clone(repoUrl, localPath);
+
+//     // Parse the repository files
+//     const files = glob.sync('**/*.js', { cwd: localPath });
+//     const codeFiles = files.map(file => ({
+//       filePath: file,
+//       content: fs.readFileSync(path.join(localPath, file), 'utf-8')
+//     }));
+
+//     // Store the parsed code files in memory with the session ID
+//     repositories[sessionId] = codeFiles;
+
+//     res.json({ message: 'Repository uploaded and parsed successfully', sessionId }); // Return session ID
+//   } catch (error) {
+//     console.error('Error:', error.message);
+//     res.status(500).json({ error: 'Failed to upload and parse repository' });
+//   }
+// });
+
+// app.post('/api/ask', async (req, res) => {
+//   const { sessionId, question } = req.body;
+
+//   if (!sessionId || !repositories[sessionId]) {
+//     return res.status(400).json({ error: 'No repository found for the provided session ID' });
+//   }
+
+//   const codeFiles = repositories[sessionId];
+//   const codeSnippet = codeFiles.map(file => file.content).join('\n');
+
+
+//   try {
+//     // For text-only input, use the gemini-pro model
+//     const model = genAI.getGenerativeModel({ model: "gemini-pro"});
+
+//     const prompt = codeSnippet + ' ' + question;
+
+   
+
+//     const result = await model.generateContent(prompt);
+//     const response = await result.response;
+//     const text = response.text();
+
+//     console.log(text);
+
+//     // Process response from Google Gemini API
+    
+
+//     // Return answer to client
+//     res.json(text);
+//   }
+//   catch (error) {
+//         console.error('Error:', error);
+//         res.status(500).json({ error: 'An error occurred while processing with Google Gemini API' });
+//       }
+
+// });
+
+// const PORT = process.env.PORT || 3001;
+// app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 
 

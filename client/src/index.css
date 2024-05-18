@@ -1,32 +1,48 @@
-.App {
-  text-align: center;
-  margin: 50px auto;
-  max-width: 600px;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles */
+body {
+  font-family: 'Inter', sans-serif;
 }
 
-textarea {
-  width: 100%;
-  height: 100px;
-  margin-bottom: 20px;
+.header {
+  @apply flex justify-between items-center p-5 bg-blue-500 text-white;
 }
 
-button {
-  padding: 10px 20px;
-  background-color: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+.hero-section {
+  @apply text-center my-10;
 }
 
-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
+.hero-title {
+  @apply text-4xl font-bold mb-5;
 }
 
-.response {
-  margin-top: 20px;
-  border: 1px solid #ccc;
-  padding: 10px;
-  border-radius: 4px;
+.hero-subtitle {
+  @apply text-lg mb-5;
+}
+
+.hero-button {
+  @apply bg-blue-500 text-white px-6 py-3 rounded-full text-lg font-bold hover:bg-blue-600 transition duration-300;
+}
+
+.section-title {
+  @apply text-3xl font-bold mb-5 text-center;
+}
+
+.input-field {
+  @apply w-full p-3 border rounded mb-5;
+}
+
+.upload-button, .ask-button {
+  @apply w-full bg-blue-500 text-white px-4 py-3 rounded-full font-bold hover:bg-blue-600 transition duration-300;
+}
+
+.message-box {
+  @apply mt-5 p-4 border rounded bg-gray-100;
+}
+
+.footer {
+  @apply w-full p-5 bg-blue-500 text-white text-center;
 }
