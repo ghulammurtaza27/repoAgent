@@ -14,7 +14,31 @@ const app = express();
 app.use(bodyParser.json());
 app.use(cors());
 
-const repositories = {}; // Store parsed repositories in memory (for simplicity)
+const REPOS_DIR = path.join(__dirname, 'repos');
+const SESSIONS_DIR = path.join(__dirname, 'sessions');
+
+// Ensure directories exist
+fs.ensureDirSync(REPOS_DIR);
+fs.ensureDirSync(SESSIONS_DIR);
+
+// Load sessions from disk
+const loadSessions = () => {
+  const sessions = {};
+  const sessionFiles = glob.sync(`${SESSIONS_DIR}/*.json`);
+  sessionFiles.forEach((file) => {
+    const sessionId = path.basename(file, '.json');
+    sessions[sessionId] = fs.readJsonSync(file);
+  });
+  return sessions;
+};
+
+// Store parsed repositories in memory (for simplicity)
+const repositories = loadSessions();
+
+const saveSession = (sessionId, data) => {
+  const sessionPath = path.join(SESSIONS_DIR, `${sessionId}.json`);
+  fs.writeJsonSync(sessionPath, data, { spaces: 2 });
+};
 
 app.post('/api/upload-repo', async (req, res) => {
   const { repoUrl } = req.body;
@@ -22,7 +46,7 @@ app.post('/api/upload-repo', async (req, res) => {
 
   // Extract repo name from URL
   const repoName = path.basename(repoUrl, '.git');
-  const localPath = path.join(__dirname, 'repos', sessionId);
+  const localPath = path.join(REPOS_DIR, sessionId);
 
   try {
     // Clone the repository
@@ -39,10 +63,11 @@ app.post('/api/upload-repo', async (req, res) => {
       content: fs.readFileSync(path.join(localPath, file), 'utf-8')
     }));
 
-    // Store the parsed code files in memory with the session ID
+    // Store the parsed code files in memory and on disk with the session ID
     repositories[sessionId] = codeFiles;
+    saveSession(sessionId, { repoUrl, repoName, codeFiles });
 
-    res.json({ message: 'Repository uploaded and parsed successfully', sessionId }); // Return session ID
+    res.json({ message: 'Repository uploaded and parsed successfully', sessionId, repoName }); // Return session ID and repo name
   } catch (error) {
     console.error('Error:', error.message);
     res.status(500).json({ error: 'Failed to upload and parse repository' });
@@ -63,7 +88,15 @@ app.post('/api/ask', async (req, res) => {
     // For text-only input, use the gemini-pro model
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-    const prompt = `${codeSnippet}\n\nQuestion: ${question}`;
+    // Prompt construction with guidelines
+    const prompt = `
+    Here is the relevant code context:
+    ${codeSnippet}
+
+    Question: ${question}
+
+    Please provide a detailed and specific response. If there are any bugs, explain the cause and suggest a fix. If the code can be improved, provide optimization suggestions. Ensure the response is clear and actionable.
+    `;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -81,8 +114,31 @@ app.post('/api/ask', async (req, res) => {
   }
 });
 
+// New API to list all repositories
+app.get('/api/repos', (req, res) => {
+  const repoList = Object.keys(repositories).map(sessionId => ({
+    sessionId,
+    repoName: repositories[sessionId][0].repoName
+  }));
+  res.json(repoList);
+});
+
+// New API to delete a repository
+app.delete('/api/repos/:sessionId', (req, res) => {
+  const { sessionId } = req.params;
+  if (repositories[sessionId]) {
+    delete repositories[sessionId];
+    fs.removeSync(path.join(REPOS_DIR, sessionId));
+    fs.removeSync(path.join(SESSIONS_DIR, `${sessionId}.json`));
+    res.json({ message: 'Repository deleted successfully' });
+  } else {
+    res.status(404).json({ error: 'Repository not found' });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
 
 
