@@ -4,7 +4,8 @@
   },
   "scripts": {
     "start": "concurrently \"cd server && npm start\" \"cd client && npm start\"",
-    "install": "cd server && npm install && cd ../client && npm install"
+    "install": "cd server && npm install && cd ../client && npm install",
+    "build": "cd ../client && npm run build"
   }
   
 }
