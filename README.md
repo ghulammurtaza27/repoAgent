@@ -28,6 +28,9 @@ To run the application locally, follow these steps:
 5. The application will analyze the code and provide answers to your questions.
 
 
+![Image of Web App](screenshots/Screenshot 2024-05-19 at 2.58.07 AM.jpg?raw=true "Screenshot 1")
+
+
 
 ## Contributing
 
