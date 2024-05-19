@@ -5,6 +5,7 @@ RepoQA is a web application that allows users to upload GitHub repositories and 
 ## Features
 
 - **Upload Repository:** Users can upload their GitHub repositories directly to the web app.
+[homepage](https://github.com/ghulammurtaza27/repoAgent/blob/main/screenshots/Screenshot%202024-05-19%20at%202.58.07%20AM.png)
 - **Ask Questions:** Once a repository is uploaded, users can ask questions about the code.
 - **AI-Powered Answers:** The application uses AI models to analyze the code and provide accurate answers to user questions.
 - **Dark Mode:** Toggle between light and dark mode for better readability.
