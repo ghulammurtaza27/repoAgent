@@ -32,18 +32,9 @@ To run the application locally, follow these steps:
 4. Once the repository is uploaded, you can ask questions about the code by typing them into the input field and clicking the "Ask" button.
 5. The application will analyze the code and provide answers to your questions.
 
-
-
-
-
-
 ## Contributing
 
 Contributions are welcome! If you'd like to contribute to RepoQA, please fork the repository, make your changes, and submit a pull request. Make sure to follow the contribution guidelines outlined in the CONTRIBUTING.md file.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE.md file for details.
 
 ## Acknowledgements
 
